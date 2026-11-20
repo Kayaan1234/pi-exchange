@@ -45,3 +45,11 @@ Decision: Use `-O0 -g` for debugging and `-O2` for measurement, retaining `-Werr
 Why: Debug builds prioritise inspectability; optimised builds provide representative performance measurements.
 Trade-off: Two configurations require maintenance.
 Revisit if: Profiling reveals the need for different optimisation settings.
+
+## 2026-11-20 — Separate build directories by component and configuration
+Context: Decide how to organise build outputs for the exchange and generator across debug and measurement configurations.
+Options: Reuse build directories by switching CMake configurations, or maintain separate directories for each component and configuration.
+Decision: Use four build directories: `build-exchange-debug`, `build-exchange-measure`, `build-generator-debug`, and `build-generator-measure`.
+Why: Keeps build configurations isolated, avoids repeated reconfiguration, and reduces the risk of running the wrong binary during debugging or benchmarking.
+Trade-off: Additional disk usage and multiple build directories to maintain.
+Revisit if: Build configurations multiply or build management becomes unnecessarily complex.

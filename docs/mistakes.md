@@ -27,3 +27,9 @@ What I believed / predicted: Compiling on the 4GB Pi would guarantee compatibili
 What actually happened: RAM capacity alone does not determine binary compatibility.
 Why: I confused runtime memory constraints with compilation and platform compatibility.
 What I'll do differently: Build on each target device and verify compatibility independently.
+
+## 2026-11-20 — Failed to isolate build configurations
+What I believed / predicted: Separate build directories for exchange and generator were sufficient to organise Debug and Measure builds.
+What actually happened: I initially created one directory per component, then realised each component needed separate Debug and Measure directories.
+Why: I organised builds by component but overlooked the configuration dimension.
+What I'll do differently: Define build directories by both component and configuration before running CMake.
