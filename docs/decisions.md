@@ -53,3 +53,67 @@ Decision: Use four build directories: `build-exchange-debug`, `build-exchange-me
 Why: Keeps build configurations isolated, avoids repeated reconfiguration, and reduces the risk of running the wrong binary during debugging or benchmarking.
 Trade-off: Additional disk usage and multiple build directories to maintain.
 Revisit if: Build configurations multiply or build management becomes unnecessarily complex.
+
+## 2026-11-22 — Dedicated Ethernet subnet
+Context: The Pis need a communication path for the experiment that is separate from household Wi-Fi.
+Options: Put `eth0` on the Wi-Fi subnet (`192.168.1.0/24`), or use a separate, non-overlapping subnet.
+Decision: Use `10.10.10.0/24` for the cable, with Pi A (exchange) at `10.10.10.1` and Pi B (generator) at `10.10.10.2`.
+Why: Overlapping connected networks on `wlan0` and `eth0` would create competing routes; a separate subnet makes the path easy to predict and inspect with `ip route get`.
+Trade-off: Two address spaces to keep track of; the specific `10.10.10.x` values give no performance benefit.
+Revisit if: A switch or additional devices join the experiment network.
+
+## 2026-11-22 — Static addressing on Ethernet
+Context: The exchange client needs a fixed destination, and benchmark runs must be comparable.
+Options: DHCP, link-local auto-addressing, or manually assigned static addresses.
+Decision: `ipv4.method manual` with fixed addresses on both Pis.
+Why: There is no DHCP server on the direct cable, and fixed addresses remove a source of variation between runs.
+Trade-off: Addresses must be managed by hand on each Pi.
+Revisit if: The number of devices makes manual assignment error-prone.
+
+## 2026-11-22 — Persist configuration through NetworkManager
+Context: An address added with `ip addr add` disappeared, sending traffic back over Wi-Fi.
+Options: Re-run `ip addr add` each session, use a startup script, or configure the NetworkManager profile.
+Decision: Modify `Wired connection 1` on each Pi with `connection.autoconnect yes` and static IPv4 settings.
+Why: NetworkManager is already managing the interfaces, and a saved profile is restored automatically after reboot.
+Trade-off: Configuration is tied to NetworkManager; changes must go through `nmcli` rather than `ip`.
+Revisit if: NetworkManager is replaced or interferes with the experiment.
+
+## 2026-11-22 — Keep Wi-Fi as the default route
+Context: Adding an Ethernet address could make the cable a candidate default route.
+Options: Allow Ethernet to become the default route, or restrict it to the `10.10.10.0/24` traffic.
+Decision: Set `ipv4.never-default yes` on both Ethernet profiles.
+Why: The cable links only the two Pis; neither forwards traffic to the internet, so internet traffic must stay on Wi-Fi.
+Trade-off: None significant for this project; the cable can't be used for any other destinations.
+Revisit if: One Pi is deliberately configured as a gateway for the other.
+
+## 2026-11-XX — Leave household Wi-Fi on DHCP
+Context: Changing Wi-Fi addresses could break SSH from my Mac.
+Options: DHCP reservations on the router, static Wi-Fi addresses on the Pis, or leave DHCP unchanged.
+Decision: Leave Wi-Fi and the home router unchanged.
+Why: The household network has had problems before, and Wi-Fi is not on the measured path.
+Trade-off: Wi-Fi IPs may change, so SSH by literal IP can break.
+Revisit if: Wi-Fi address changes start disrupting work.
+
+## 2026-11-22 — Standard network verification sequence
+Context: Several conclusions earlier in the project were drawn from a single command's output.
+Options: Spot-check with `ping`, or run a fixed sequence covering each layer.
+Decision: Before experiments, run `ip -4 addr show dev eth0`, `ip -4 route`, `ip route get <peer>`, `ip neigh show dev eth0`, and `ping -c 3 <peer>` on both Pis, and save the output with the run.
+Why: Each command checks a different layer: address, routes, route choice, neighbour resolution and delivery. Saving the output means the evidence can be shown later, not just reported.
+Trade-off: Takes slightly longer before each session.
+Revisit if: The checks are automated in a pre-run script.
+
+## 2026-11-22 — Correctness before measurement
+Context: Discussion drifted into concurrency and optimisation before the exchange existed.
+Options: Design for concurrency and latency from the start, or first get one order round-trip working.
+Decision: First implement one order Pi B → Pi A → result → Pi B, and only instrument it once it is correct and repeatable.
+Why: Optimising or measuring a transaction that isn't yet correct gives meaningless numbers.
+Trade-off: Performance-driven design choices are postponed and may require later refactoring.
+Revisit if: The single-transaction design blocks reasonable concurrency later.
+
+## 2026-11-22 — Measure application latency, not ping
+Context: Ping gave a ~0.32 ms RTT over the cable.
+Options: Use ping as the latency baseline, or measure the exchange's own order round trip.
+Decision: Treat ping only as a connectivity check; measure the latency distribution at the application level, and confirm with `tcpdump` on `eth0` that the order traffic uses the cable.
+Why: ICMP doesn't go through the exchange's protocol, serialisation, scheduling or processing path, and three samples don't make a distribution.
+Trade-off: Needs custom timestamping and many more runs.
+Revisit if: Ping later becomes useful as a baseline for separating network cost from application cost.
