@@ -1,4 +1,4 @@
-## 2026-11-19 — Folders named by role, not hardware**
+## 2026-11-19 — Folders named by role, not hardware
 Context: Decide where each Pi's code lives.
 Options: Hardware-based (piA, piB) or role-based (exchange, generator).
 Decision: exchange and generator.
@@ -6,21 +6,13 @@ Why: Directories represent software roles, not physical hardware. This allows bo
 Trade-off: Must map hardware to roles using SSH aliases.
 Revisit if: Hardware identity becomes relevant to code organisation.
 
-## 2026-11-19 — Ownership of shared code**
+## 2026-11-19 — Ownership of shared code
 Context: Both the exchange and generator require shared code.
 Options: Owned by exchange, generator, or a separate shared directory.
 Decision: Exchange owns shared code.
 Why: The exchange is authoritative, and the generator conforms to its interface.
 Trade-off: The generator depends on exchange-owned code. Limit coupling by sharing only what is necessary.
 Revisit if: Shared code becomes independent of the exchange or generator requirements diverge.
-
-## 2026-11-19 — Test directory structure**
-Context: Decide where unit and end-to-end tests live.
-Options: One central tests directory or component-specific test directories.
-Decision: exchange/tests and generator/tests for component tests; root tests/ for end-to-end tests.
-Why: Each component owns its tests, while cross-component tests remain separate.
-Trade-off: Tests are spread across multiple directories, requiring coordinated execution.
-Revisit if: Test duplication or execution complexity becomes significant.
 
 ## 2026-11-19 — Build on each target Pi
 Context: Decide where each component is compiled.
@@ -45,14 +37,6 @@ Decision: Use `-O0 -g` for debugging and `-O2` for measurement, retaining `-Werr
 Why: Debug builds prioritise inspectability; optimised builds provide representative performance measurements.
 Trade-off: Two configurations require maintenance.
 Revisit if: Profiling reveals the need for different optimisation settings.
-
-## 2026-11-20 — Separate build directories by component and configuration
-Context: Decide how to organise build outputs for the exchange and generator across debug and measurement configurations.
-Options: Reuse build directories by switching CMake configurations, or maintain separate directories for each component and configuration.
-Decision: Use four build directories: `build-exchange-debug`, `build-exchange-measure`, `build-generator-debug`, and `build-generator-measure`.
-Why: Keeps build configurations isolated, avoids repeated reconfiguration, and reduces the risk of running the wrong binary during debugging or benchmarking.
-Trade-off: Additional disk usage and multiple build directories to maintain.
-Revisit if: Build configurations multiply or build management becomes unnecessarily complex.
 
 ## 2026-11-22 — Dedicated Ethernet subnet
 Context: The Pis need a communication path for the experiment that is separate from household Wi-Fi.
@@ -86,14 +70,6 @@ Why: The cable links only the two Pis; neither forwards traffic to the internet,
 Trade-off: None significant for this project; the cable can't be used for any other destinations.
 Revisit if: One Pi is deliberately configured as a gateway for the other.
 
-## 2026-11-XX — Leave household Wi-Fi on DHCP
-Context: Changing Wi-Fi addresses could break SSH from my Mac.
-Options: DHCP reservations on the router, static Wi-Fi addresses on the Pis, or leave DHCP unchanged.
-Decision: Leave Wi-Fi and the home router unchanged.
-Why: The household network has had problems before, and Wi-Fi is not on the measured path.
-Trade-off: Wi-Fi IPs may change, so SSH by literal IP can break.
-Revisit if: Wi-Fi address changes start disrupting work.
-
 ## 2026-11-22 — Standard network verification sequence
 Context: Several conclusions earlier in the project were drawn from a single command's output.
 Options: Spot-check with `ping`, or run a fixed sequence covering each layer.
@@ -117,3 +93,11 @@ Decision: Treat ping only as a connectivity check; measure the latency distribut
 Why: ICMP doesn't go through the exchange's protocol, serialisation, scheduling or processing path, and three samples don't make a distribution.
 Trade-off: Needs custom timestamping and many more runs.
 Revisit if: Ping later becomes useful as a baseline for separating network cost from application cost.
+
+## 2026-11-23 — Provisionally kept 4GB Pi as exchange, 8GB Pi as generator
+Context: Decide which Pi runs the matching engine and which runs the load generator.
+Options: 4GB exchange / 8GB generator, or the reverse.
+Decision: 4GB for the exchange, 8GB for the generator, provisionally.
+Why: `lscpu` showed identical CPUs, and the 4GB Pi has ~2.9 GiB available against a hypothetical ~200 MiB engine. One million 8-byte latency measurements is only ~8 MB, so the generator doesn't need 8GB either. Nothing measured favours reversing.
+Trade-off: Neither choice is benchmarked, and the 200 MiB figure is hypothetical. The 4GB Pi has less margin if the engine grows.
+Revisit if: Measured memory approaches the 4GB Pi's available RAM, or controlled benchmarks show a meaningful difference between the two roles.
